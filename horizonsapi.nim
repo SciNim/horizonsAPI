@@ -190,16 +190,25 @@ when isMainModule:
                  coEphemType : "OBSERVER" }.toTable
   let ephOpt = { eoCenter : "coord@399",
                  eoStartTime : "2017-01-01",
-                 eoStopTime : "2019-12-31",
-                 eoStepSize : "1 HOURS",
+                 eoStopTime : "2017-12-31",
+                 eoStepSize : "1 DAYS",
                  eoCoordType : "GEODETIC",
                  eoSiteCoord : "+6.06670,+46.23330,0",
                  eoCSVFormat : "YES" }.toTable
   var q: Quantities
   q.incl 20 ## Observer range!
 
-  let fut = request(comOpt, ephOpt, q)
-  ## If multiple we would `poll`!
-  let res = fut.waitFor()
+  let req = initHorizonsRequest(comOpt, ephOpt, q)
+  let res = getResponses(@[req])
 
-  echo res.parseJson.pretty()
+  echo res
+  import datamancer
+  let df = parseCsvString(res[0].csvData)
+  echo df
+
+  when false:
+    let fut = request(comOpt, ephOpt, q)
+    ## If multiple we would `poll`!
+    let res = fut.waitFor()
+
+    echo res.parseJson.pretty()

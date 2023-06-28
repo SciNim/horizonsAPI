@@ -39,9 +39,22 @@ let res = fut.waitFor() # wait for it
 let resJ = res.parseJson# result is json, so can parse it
 for l in resJ["result"].getStr.splitLines()[0 .. 30]:
   echo l
+
+## Or alternatively: Construct a HorizonsRequest object and use `getResponses`, which
+## takes a `seq` of requests and processes them concurrently. The result is a
+## `seq[HorizonsResponse]`, which has seen very basic parsing. The data is split
+## into a header, footer and a data section. The data section (if `eoCSVFormat` is
+## set to 'YES') can be parsed e.g. with datamancer's `parseCsvString`
+import datamancer
+block Alt:  
+  let req = initHorizonsRequest(comOpt, ephOpt, q)
+  let res = getResponses(@[req])
+  let df = parseCsvString(res[0].csvData)
+  echo df
 #+end_src
-#+begin_src sh
-*******************************************************************************
+
+#+begin_src 
+,*******************************************************************************
  Revised: July 31, 2013                  Sun                                 10
 
  PHYSICAL PROPERTIES (updated 2018-Aug-15):
@@ -62,16 +75,40 @@ for l in resJ["result"].getStr.splitLines()[0 .. 30]:
                                     speed: 19.4 km/s (0.0112 au/day)
   Motion relative to 2.73K BB/CBR = apex : l= 264.7 +- 0.8; b= 48.2 +- 0.5 deg.
                                     speed: 369 +-11 km/s
-*******************************************************************************
+,*******************************************************************************
 
 
-*******************************************************************************
+,*******************************************************************************
 Ephemeris / API_USER Wed Jun 28 06:51:58 2023 Pasadena, USA      / Horizons
-*******************************************************************************
+,*******************************************************************************
 Target body name: Sun (10)                        {source: DE441}
 Center body name: Earth (399)                     {source: DE441}
 Center-site name: (user defined site below)
-*******************************************************************************
+,*******************************************************************************
+# From the `Alt` block        
+DataFrame with 6 columns and 8737 rows:
+   Idx    Date__(UT)__HR:MN             Unnamed0             Unnamed1                delta               deldot             Unnamed2
+dtype:               string               string               string                float                float               object
+     0    2022-Jan-01 00:00                   ""                   ""               0.9834             -0.01627                 null
+     1    2022-Jan-01 01:00                   ""                   ""               0.9834             -0.08504                 null
+     2    2022-Jan-01 02:00                   ""                   ""               0.9834              -0.1494                 null
+     3    2022-Jan-01 03:00                   ""                   ""               0.9834              -0.2049                 null
+     4    2022-Jan-01 04:00                   ""                   ""               0.9834              -0.2478                 null
+     5    2022-Jan-01 05:00                   ""                   ""               0.9834              -0.2751                 null
+     6    2022-Jan-01 06:00                   ""                   ""               0.9834              -0.2849                 null
+     7    2022-Jan-01 07:00                    N                    m               0.9834              -0.2767                 null
+     8    2022-Jan-01 08:00                    C                    m               0.9834              -0.2508                 null
+     9    2022-Jan-01 09:00                    *                    m               0.9833              -0.2091                 null
+    10    2022-Jan-01 10:00                    *                    m               0.9833              -0.1543                 null
+    11    2022-Jan-01 11:00                    *                    m               0.9833             -0.09027                 null
+    12    2022-Jan-01 12:00                    *                    m               0.9833             -0.02123                 null
+    13    2022-Jan-01 13:00                    *                    m               0.9833              0.04809                 null
+    14    2022-Jan-01 14:00                    *                    m               0.9833                0.113                 null
+    15    2022-Jan-01 15:00                    *                   ""               0.9833               0.1691                 null
+    16    2022-Jan-01 16:00                    *                   ""               0.9833               0.2125                 null
+    17    2022-Jan-01 17:00                    N                   ""               0.9834               0.2404                 null
+    18    2022-Jan-01 18:00                    A                   ""               0.9834               0.2509                 null
+    19    2022-Jan-01 19:00                   ""                   ""               0.9834               0.2432                 null
 #+end_src
 
 The actual body of the requested data starts further down.

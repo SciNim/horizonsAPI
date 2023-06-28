@@ -23,3 +23,15 @@ let res = fut.waitFor() # wait for it
 let resJ = res.parseJson# result is json, so can parse it
 for l in resJ["result"].getStr.splitLines()[0 .. 30]:
   echo l
+
+## Or alternatively: Construct a HorizonsRequest object and use `getResponses`, which
+## takes a `seq` of requests and processes them concurrently. The result is a
+## `seq[HorizonsResponse]`, which has seen very basic parsing. The data is split
+## into a header, footer and a data section. The data section (if `eoCSVFormat` is
+## set to 'YES') can be parsed e.g. with datamancer's `parseCsvString`
+import datamancer
+block Alt:  
+  let req = initHorizonsRequest(comOpt, ephOpt, q)
+  let res = getResponses(@[req])
+  let df = parseCsvString(res[0].csvData)
+  echo df
