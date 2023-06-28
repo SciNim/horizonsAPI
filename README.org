@@ -12,7 +12,7 @@ https://ssd.jpl.nasa.gov/horizons/app.html
 
 To give a simple example though. Assume we want to know the distance
 between Sun and Earth for every day of last year (2022). We can do
-that as follows:
+that as follows (see [[examples/sun_earth_distance.nim]])
 #+begin_src nim :tangle examples/sun_earth_distance.nim
 import ../horizonsapi
 import std / [asyncdispatch, strutils] 
@@ -40,7 +40,7 @@ let resJ = res.parseJson# result is json, so can parse it
 for l in resJ["result"].getStr.splitLines()[0 .. 30]:
   echo l
 #+end_src
-:RESULTS:
+#+begin_src sh
 *******************************************************************************
  Revised: July 31, 2013                  Sun                                 10
 
@@ -72,6 +72,6 @@ Target body name: Sun (10)                        {source: DE441}
 Center body name: Earth (399)                     {source: DE441}
 Center-site name: (user defined site below)
 *******************************************************************************
-:END:
+#+end_src
 
 The actual body of the requested data starts further down.
