@@ -111,6 +111,16 @@ type
   CommonOptions* = Table[CommonOptionsKind, string]
   EphemerisOptions* = Table[EphemerisOptionsKind, string]
 
+  HorizonsResponse* = object
+    header*: string
+    footer*: string
+    csvData*: string # <- the data field can be parsed using `parseCsvString` from `datamancer`
+
+  HorizonsRequest* = object
+    commonOpt*: CommonOptions
+    ephemerisOpt*: EphemerisOptions
+    quantities*: Quantities
+
 ## Example URL:
 ## https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND='499'&OBJ_DATA='YES'&MAKE_EPHEM='YES'&EPHEM_TYPE='OBSERVER'&CENTER='500@399'&START_TIME='2006-01-01'&STOP_TIME='2006-01-20'&STEP_SIZE='1%20d'&QUANTITIES='1,9,20,23,24,29'
 proc serialize*[T: CommonOptions | EphemerisOptions](opts: T): string =
@@ -136,6 +146,41 @@ proc request*(cOpt: CommonOptions, eOpt: EphemerisOptions, q: Quantities): Futur
   echo "Performing request to: ", req
   var client = newAsyncHttpClient()
   return await client.getContent(req)
+
+proc initHorizonsRequest*(cOpt: CommonOptions, eOpt: EphemerisOptions, q: Quantities): HorizonsRequest =
+  result = HorizonsRequest(commonOpt: cOpt, ephemerisOpt: eOpt, quantities: q)
+
+proc parseHorizonsResponse*(response: string): HorizonsResponse =
+  ## Parses the given string of the Horizons response and returns it as
+  ## an object with header, footer and data body separated.
+  let res = response.parseJson["result"].getStr #.multireplace((r"\n", "FOO"))
+  const Start = "$$SOE"
+  const End = "$$EOE"
+  const DataHeader = "Table format"
+  # let's keep the parsing simple
+  let dataStartIdx = res.find(Start) # indicates start of data
+  let dataEndIdx = res.find(End)
+  let header = res[0 ..< dataStartIdx]
+  let dataHeaderTab = header.find(DataHeader)
+  const DataHeaderStart = "*\n" ## NOTE: after `Table format`!
+  const DataHeaderStop = ",\n" ## NOTE: after `DataHeaderStart`!
+  let dataHeaderStart = header.find(DataHeaderStart, start = dataHeaderTab)
+  let dataHeaderStop = header.find(DataHeaderStop, start = dataHeaderStart)
+  let dataHeader = header[dataHeaderStart + DataHeaderStart.len .. dataHeaderStop].strip
+  let data = res[dataStartIdx + Start.len ..< dataEndIdx].strip
+  result = HorizonsResponse(header: header.strip,
+                            footer: res[dataEndIdx + End.len .. ^1].strip,
+                            csvData: dataHeader & "\n" & data)
+
+proc getResponses*(reqs: seq[HorizonsRequest]): seq[HorizonsResponse] =
+  var futs = newSeq[Future[string]](reqs.len)
+  for i, r in reqs:
+    futs[i] = request(r.commonOpt, r.ephemerisOpt, r.quantities)
+  while futs.anyIt(not it.finished()):
+    poll()
+  result = newSeq[HorizonsResponse](reqs.len)
+  for i, f in futs:
+    result[i] = parseHorizonsResponse(waitFor(f))
 
 when isMainModule:
   # let's try a simple request
