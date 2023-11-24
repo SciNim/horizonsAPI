@@ -160,6 +160,9 @@ proc parseHorizonsResponse*(response: string): HorizonsResponse =
   # let's keep the parsing simple
   let dataStartIdx = res.find(Start) # indicates start of data
   let dataEndIdx = res.find(End)
+  if dataStartIdx < 0:
+    echo "ERROR:\n\n"
+    echo res
   let header = res[0 ..< dataStartIdx]
   let dataHeaderTab = header.find(DataHeader)
   const DataHeaderStart = "*\n" ## NOTE: after `Table format`!
@@ -181,6 +184,15 @@ proc getResponses*(reqs: seq[HorizonsRequest]): seq[HorizonsResponse] =
   result = newSeq[HorizonsResponse](reqs.len)
   for i, f in futs:
     result[i] = parseHorizonsResponse(waitFor(f))
+
+proc getResponsesSync*(reqs: seq[HorizonsRequest]): seq[HorizonsResponse] =
+  ## Non-async version of `getResponses`. I think the server does not like the async version
+  var res = newSeq[string](reqs.len)
+  for i, r in reqs:
+    res[i] = waitFor request(r.commonOpt, r.ephemerisOpt, r.quantities)
+  result = newSeq[HorizonsResponse](res.len)
+  for i, r in res:
+    result[i] = parseHorizonsResponse(r)
 
 when isMainModule:
   # let's try a simple request
